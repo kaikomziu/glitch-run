@@ -1,0 +1,120 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #05050b; color: #e8e8ff; font-family: "DotGothic16", monospace; }
+body { display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; touch-action: none; }
+canvas { display: block; image-rendering: pixelated; background: #0d1030; }
+.hidden { display: none !important; }
+
+/* 画面 */
+.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(4, 4, 12, .72); backdrop-filter: blur(2px); z-index: 20; padding: 16px; }
+.panel { width: min(560px, 100%); max-height: 100%; overflow-y: auto; background: #10122a; border: 2px solid #3a3f7a; box-shadow: 0 0 0 4px #0a0b1c, 0 0 40px rgba(92, 240, 255, .15); padding: 24px 26px; text-align: center; }
+.panel.small { width: min(400px, 100%); }
+.panel h2 { font-size: 22px; letter-spacing: .08em; margin-bottom: 14px; color: #5cf0ff; }
+.panel h2 small { font-size: 12px; color: #889; margin-left: 6px; }
+.panel h2 .cnt { font-size: 15px; color: #ff5cf0; margin-left: 6px; }
+.note { font-size: 13px; line-height: 1.8; color: #aab; margin: 8px 0 14px; text-align: left; }
+.note b { color: #ff5cf0; }
+button { font-family: inherit; font-size: 15px; color: #e8e8ff; background: #1c2050; border: 2px solid #3a3f7a; padding: 10px 14px; cursor: pointer; transition: transform .06s, background .15s; }
+button:hover { background: #262b6a; border-color: #5cf0ff; }
+button:active { transform: translateY(1px); }
+button.primary { background: #0f5d6a; border-color: #5cf0ff; color: #fff; }
+button.primary:hover { background: #13788a; }
+button:disabled { opacity: .5; cursor: default; }
+.menu { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+.menu.row { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.menu.row button { flex: 1 1 120px; }
+[data-back] { margin-top: 12px; }
+
+/* タイトル */
+.title { position: relative; }
+.logo { font-family: "Share Tech Mono", monospace; font-size: 58px; letter-spacing: .06em; color: #fff; position: relative; line-height: 1; margin-top: 6px; }
+.logo::before, .logo::after { content: attr(data-text); position: absolute; left: 0; right: 0; top: 0; overflow: hidden; }
+.logo::before { color: #ff5cf0; transform: translate(-3px, 0); clip-path: inset(0 0 55% 0); animation: gl1 3.2s infinite steps(1); mix-blend-mode: screen; }
+.logo::after { color: #5cf0ff; transform: translate(3px, 0); clip-path: inset(55% 0 0 0); animation: gl2 2.7s infinite steps(1); mix-blend-mode: screen; }
+@keyframes gl1 { 0%, 88%, 100% { transform: translate(-2px, 0); } 90% { transform: translate(-9px, -2px); clip-path: inset(10% 0 60% 0); } 94% { transform: translate(6px, 1px); clip-path: inset(40% 0 20% 0); } }
+@keyframes gl2 { 0%, 84%, 100% { transform: translate(2px, 0); } 86% { transform: translate(10px, 2px); clip-path: inset(70% 0 5% 0); } 92% { transform: translate(-7px, 0); clip-path: inset(30% 0 50% 0); } }
+.sub { font-family: "Share Tech Mono", monospace; letter-spacing: .6em; color: #ffe066; margin: 8px 0 14px; font-size: 14px; }
+.lead { font-size: 14px; line-height: 1.9; color: #ccd; }
+.lead span { color: #ff5cf0; }
+.stats { display: flex; gap: 8px; justify-content: center; font-size: 12px; color: #889; }
+.stats div { flex: 1; background: #0a0b1c; border: 1px solid #262a55; padding: 6px 4px; }
+.stats b { display: block; font-family: "Share Tech Mono", monospace; font-size: 17px; color: #fff; margin-top: 2px; }
+.ver { position: absolute; right: 8px; bottom: 4px; font-size: 11px; color: #556; font-family: "Share Tech Mono", monospace; }
+
+/* 操作表 */
+.keys { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+.keys th { width: 90px; color: #5cf0ff; font-weight: normal; padding: 6px 8px; border-bottom: 1px solid #262a55; }
+.keys td { padding: 6px 8px; border-bottom: 1px solid #262a55; }
+
+/* 練習 */
+#stageList { display: flex; flex-direction: column; gap: 6px; }
+.stageBtn { display: flex; align-items: center; gap: 12px; text-align: left; }
+.stageBtn .sn { font-family: "Share Tech Mono", monospace; color: #ffe066; font-size: 13px; width: 72px; }
+.stageBtn .st { flex: 1; }
+.stageBtn .sb { font-family: "Share Tech Mono", monospace; color: #5cf0ff; }
+
+/* 図鑑 */
+#dexList { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.dexRow { display: flex; gap: 10px; align-items: center; background: #0a0b1c; border: 1px solid #262a55; padding: 8px 10px; }
+.dexRow.found { border-color: #ff5cf0; box-shadow: inset 0 0 18px rgba(255, 92, 240, .12); }
+.dx-no { font-family: "Share Tech Mono", monospace; font-size: 12px; color: #ff5cf0; width: 70px; }
+.dx-body { flex: 1; }
+.dx-name { font-size: 15px; }
+.dx-hint { font-size: 12px; color: #99a; margin-top: 3px; line-height: 1.6; }
+.dx-st { font-size: 11px; color: #667; white-space: nowrap; }
+.dexRow.found .dx-st { color: #6dff8a; }
+
+/* ランキング */
+#rankList { max-height: 56vh; overflow-y: auto; text-align: left; font-size: 14px; }
+.rankRow { display: flex; gap: 10px; align-items: center; padding: 6px 8px; border-bottom: 1px solid #1f2349; }
+.rankRow.me { background: rgba(92, 240, 255, .08); }
+.rankRow .rk { width: 30px; text-align: right; color: #ffe066; font-family: "Share Tech Mono", monospace; }
+.rankRow .rn { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rankRow .rt { font-family: "Share Tech Mono", monospace; color: #5cf0ff; font-size: 16px; }
+.rankRow .rx { font-size: 11px; color: #778; width: 70px; text-align: right; }
+
+/* リザルト */
+.bigTime { font-family: "Share Tech Mono", monospace; font-size: 50px; color: #fff; text-shadow: 3px 0 #ff5cf0, -3px 0 #5cf0ff; margin: 4px 0; }
+.newpb { color: #ffe066; margin: 4px 0; animation: blink .8s infinite; }
+@keyframes blink { 50% { opacity: .4; } }
+.prev { font-size: 13px; color: #99a; }
+.first { font-size: 13px; color: #ff5cf0; margin-top: 8px; }
+.splits { margin: 12px 0; font-size: 13px; text-align: left; }
+.splits div { display: flex; gap: 10px; padding: 4px 6px; border-bottom: 1px solid #1f2349; }
+.splits span { flex: 1; }
+.splits b { font-family: "Share Tech Mono", monospace; font-weight: normal; color: #5cf0ff; }
+.splits em { font-family: "Share Tech Mono", monospace; font-style: normal; color: #778; width: 80px; text-align: right; }
+.meta { font-size: 13px; color: #aab; line-height: 1.8; margin: 8px 0; }
+.meta b { color: #fff; font-weight: normal; }
+#submitBox { display: flex; gap: 6px; margin-top: 10px; }
+#submitBox input { flex: 1; min-width: 0; font-family: inherit; font-size: 15px; background: #0a0b1c; color: #fff; border: 2px solid #3a3f7a; padding: 8px 10px; }
+.msg { font-size: 13px; color: #6dff8a; min-height: 1.4em; margin-top: 6px; }
+
+/* ステージ名 */
+#banner { position: fixed; left: 50%; top: 22%; transform: translate(-50%, 0); z-index: 10; pointer-events: none; font-size: 30px; text-align: center; opacity: 0; color: #fff; text-shadow: 0 0 12px rgba(92, 240, 255, .6); }
+#banner small { display: block; font-family: "Share Tech Mono", monospace; font-size: 14px; letter-spacing: .4em; color: #ffe066; }
+#banner.show { animation: banner 2s ease-out; }
+@keyframes banner { 0% { opacity: 0; transform: translate(-50%, 10px); } 15%, 70% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
+
+/* バグ発見トースト */
+#bugToast { position: fixed; right: 16px; top: 16px; z-index: 30; pointer-events: none; background: rgba(10, 0, 18, .92); border: 1px solid #ff5cf0; padding: 10px 14px; min-width: 240px; opacity: 0; transform: translateX(30px); }
+#bugToast.show { animation: toast 3.6s ease-out forwards; }
+@keyframes toast { 0% { opacity: 0; transform: translateX(30px) skewX(-10deg); } 6% { opacity: 1; transform: translateX(-6px); } 9% { transform: translateX(4px) skewX(8deg); } 12%, 85% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(30px); } }
+.bt-h { font-family: "Share Tech Mono", monospace; font-size: 12px; color: #ff5cf0; }
+.bt-h span { color: #888; margin-left: 6px; }
+.bt-n { font-size: 20px; margin: 4px 0; color: #fff; text-shadow: 2px 0 #ff5cf0, -2px 0 #5cf0ff; }
+.bt-s { font-size: 11px; color: #99a; }
+
+/* 一時停止ボタン */
+#pauseBtn { position: fixed; top: 10px; right: 10px; z-index: 15; width: 40px; height: 40px; padding: 0; font-family: "Share Tech Mono", monospace; display: none; opacity: .7; }
+body.playing #pauseBtn { display: block; }
+body.playing #pauseBtn { top: 40px; }
+
+/* タッチ操作 */
+#touch { display: none; position: fixed; inset: auto 0 0 0; z-index: 12; pointer-events: none; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); justify-content: space-between; align-items: flex-end; }
+body.touch.playing #touch { display: flex; }
+.pad { pointer-events: auto; display: flex; gap: 8px; align-items: flex-end; position: relative; }
+.pad button { width: 58px; height: 58px; border-radius: 50%; background: rgba(28, 32, 80, .55); border-color: rgba(92, 240, 255, .4); font-size: 20px; padding: 0; touch-action: none; }
+.pad button.on { background: rgba(92, 240, 255, .45); }
+.pad.left .up { position: absolute; left: 66px; bottom: 66px; }
+.pad.right .jump { width: 72px; height: 72px; font-size: 14px; font-family: "Share Tech Mono", monospace; }
+.pad.right .dash { font-size: 12px; font-family: "Share Tech Mono", monospace; border-color: rgba(255, 92, 240, .5); }

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>GLITCH RUN DELUXE - バグを使って最速を目指すアクション</title>
+<meta name="description" content="このゲームには、いくつかのバグがあります。ダッシュと壁ジャンプで駆け抜ける2Dアクション。隠されたバグを見つけて使いこなし、全5ステージの最速タイムを世界ランキングで競おう。">
+<link rel="canonical" href="https://kaikomziu.github.io/glitch-run/">
+<meta property="og:title" content="GLITCH RUN DELUXE - バグを使って最速を目指すアクション">
+<meta property="og:description" content="このゲームには、いくつかのバグがあります。バグを見つけて使いこなし、最速タイムを狙うスピードランアクション。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kaikomziu.github.io/glitch-run/">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2218%22 fill=%22%230d1030%22/><rect x=%2238%22 y=%2226%22 width=%2226%22 height=%2250%22 fill=%22%235cf0ff%22/><rect x=%2230%22 y=%2240%22 width=%2226%22 height=%2210%22 fill=%22%23ff5cf0%22 opacity=%22.8%22/><rect x=%2254%22 y=%2236%22 width=%225%22 height=%229%22 fill=%22%23101020%22/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="banner"></div>
+<div id="bugToast"></div>
+<button id="pauseBtn" aria-label="一時停止">II</button>
+
+<div id="touch">
+  <div class="pad left">
+    <button data-k="left">◀</button><button data-k="down">▼</button><button data-k="right">▶</button>
+    <button data-k="up" class="up">▲</button>
+  </div>
+  <div class="pad right">
+    <button data-k="dash" class="dash">DASH</button><button data-k="jump" class="jump">JUMP</button>
+  </div>
+</div>
+
+<!-- タイトル -->
+<section id="titleScreen" class="screen">
+  <div class="panel title">
+    <h1 class="logo" data-text="GLITCH RUN">GLITCH RUN</h1>
+    <div class="sub">D E L U X E</div>
+    <p class="lead">このゲームには、いくつかのバグがあります。<br><span>バグの利用は、禁止されていません。</span></p>
+    <div class="menu">
+      <button id="btnRta" class="primary">▶ RTA スタート（全5ステージ）</button>
+      <button id="btnPractice">ステージ練習</button>
+      <button id="btnDex">バグ図鑑</button>
+      <button id="btnRank">世界ランキング</button>
+      <button id="btnHelp">あそびかた</button>
+    </div>
+    <div class="stats">
+      <div>自己ベスト<b id="tPb">--:--.---</b></div>
+      <div>発見したバグ<b id="tBugs">0/6</b></div>
+      <div>完走回数<b id="tRuns">0</b></div>
+    </div>
+    <div class="ver" id="ver"></div>
+  </div>
+</section>
+
+<!-- あそびかた -->
+<section id="helpScreen" class="screen hidden">
+  <div class="panel">
+    <h2>あそびかた</h2>
+    <table class="keys">
+      <tr><th>移動</th><td>← → ／ A D</td></tr>
+      <tr><th>ジャンプ</th><td>Z ／ Space ／ K（長押しで高く）</td></tr>
+      <tr><th>ダッシュ</th><td>X ／ Shift ／ J（方向キーで8方向。着地で回復）</td></tr>
+      <tr><th>しゃがむ</th><td>↓ ／ S（狭い所をくぐれる）</td></tr>
+      <tr><th>壁ジャンプ</th><td>空中で壁に触れながらジャンプ（銀色の金属壁は不可）</td></tr>
+      <tr><th>やり直し</th><td>R（チェックポイントへ戻る）</td></tr>
+      <tr><th>一時停止</th><td>Esc ／ P</td></tr>
+    </table>
+    <p class="note">全5ステージを駆け抜けるタイムアタック。ミスしてもチェックポイントから再開できますが、タイマーは止まりません。<br>
+    このゲームには <b>いくつかのバグ</b> が残っています。見つけたバグは「バグ図鑑」に記録されます。<br>
+    使うかどうかはあなた次第。世界ランキングは「なんでもあり」です。</p>
+    <button data-back>戻る</button>
+  </div>
+</section>
+
+<!-- ステージ練習 -->
+<section id="practiceScreen" class="screen hidden">
+  <div class="panel">
+    <h2>ステージ練習</h2>
+    <p class="note">1ステージずつタイムを計測します（ランキング対象外）。</p>
+    <div id="stageList"></div>
+    <button data-back>戻る</button>
+  </div>
+</section>
+
+<!-- バグ図鑑 -->
+<section id="dexScreen" class="screen hidden">
+  <div class="panel">
+    <h2>バグ図鑑 <span id="dexCount" class="cnt"></span></h2>
+    <p class="note" id="dexNote"></p>
+    <div id="dexList"></div>
+    <button data-back>戻る</button>
+  </div>
+</section>
+
+<!-- ランキング -->
+<section id="rankScreen" class="screen hidden">
+  <div class="panel">
+    <h2>世界ランキング <small>RTA 全5ステージ</small></h2>
+    <div id="rankList"></div>
+    <button data-back>戻る</button>
+  </div>
+</section>
+
+<!-- 一時停止 -->
+<section id="pauseScreen" class="screen hidden">
+  <div class="panel small">
+    <h2>PAUSE</h2>
+    <div class="menu">
+      <button id="btnResume" class="primary">再開</button>
+      <button id="btnRestartRun">最初からやり直す</button>
+      <button id="btnQuit">タイトルへ</button>
+    </div>
+  </div>
+</section>
+
+<!-- RTAリザルト -->
+<section id="resultScreen" class="screen hidden">
+  <div class="panel">
+    <h2>RUN COMPLETE</h2>
+    <div class="bigTime" id="rTime"></div>
+    <div id="rNew" class="newpb hidden">★ 自己ベスト更新 ★</div>
+    <div class="prev" id="rPrev"></div>
+    <div id="rFirst" class="first hidden">初クリア！ バグ図鑑のヒントが開放されました。</div>
+    <div id="rSplits" class="splits"></div>
+    <div class="meta">ミス <b id="rDeaths"></b> 回 ／ 使ったバグ: <b id="rBugs"></b></div>
+    <div id="submitBox">
+      <input id="nameInput" maxlength="12" placeholder="名前（12文字まで）">
+      <button id="submitBtn" class="primary">ランキングに登録</button>
+    </div>
+    <div id="submitMsg" class="msg"></div>
+    <div class="menu row">
+      <button id="btnAgain" class="primary">もう一度</button>
+      <button data-back>タイトルへ</button>
+    </div>
+  </div>
+</section>
+
+<!-- 練習リザルト -->
+<section id="ilScreen" class="screen hidden">
+  <div class="panel small">
+    <h2 id="ilTitle"></h2>
+    <div class="bigTime" id="ilTime"></div>
+    <div id="ilNew" class="newpb hidden">★ ベスト更新 ★</div>
+    <div class="meta">ベスト <b id="ilBest"></b><br>使ったバグ: <b id="ilUsed"></b></div>
+    <div class="menu row">
+      <button id="btnIlAgain" class="primary">もう一度</button>
+      <button id="btnIlNext">次のステージ</button>
+      <button data-back>タイトルへ</button>
+    </div>
+  </div>
+</section>
+
+<script src="js/version.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
