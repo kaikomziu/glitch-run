@@ -11,7 +11,7 @@
   const HYPER_MUL = 1.3, HYPER_VY = -6.6, SPEED_CAP = 16;
   const COYOTE = 6, JBUF = 6, DBUF = 4;
   const SPRING_V = -13, SPRING_BUG = 1.8;
-  const ZIP_RANGE = 40;
+  const ZIP_RANGE = 44;
   const SAVE_KEY = "glitchrun_v1";
   const TEST_MODE = /[?&]test\b/.test(location.search);
 
@@ -32,10 +32,15 @@
     return {
       pb: s.pb || null, pbSplits: s.pbSplits || null, il: s.il || {}, bugs: s.bugs || {},
       cleared: !!s.cleared, name: s.name || "", pid: s.pid || null, submitted: s.submitted || null,
-      runs: s.runs || 0,
+      runs: s.runs || 0, binds: s.binds || null, course: s.course || 5,
     };
   }
   const save = loadSave();
+  // コースのステージ数が変わったら通しの自己ベストはリセット（ステージ別ベストは維持）
+  if (save.course !== STAGE_DEFS.length) {
+    save.pb = null; save.pbSplits = null; save.submitted = null;
+    save.course = STAGE_DEFS.length;
+  }
   if (!save.pid) save.pid = (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); }));
   function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
   persist();
@@ -47,12 +52,12 @@
     const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpZm56dmt0d2JvbXh0aHp2dmd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MzgxMzgsImV4cCI6MjA5MzQxNDEzOH0.M7nXP-u--6J_6rRpgz1cJj21_7KX6MtfTmZy77Xf_IE";
     const H = { apikey: KEY, Authorization: "Bearer " + KEY };
     async function top(limit = 50) {
-      const r = await fetch(`${URL_}?select=name,time_ms,bugs,deaths,updated_at&order=time_ms.asc,updated_at.asc&limit=${limit}`, { headers: H });
+      const r = await fetch(`${URL_}?select=name,time_ms,bugs,deaths,updated_at&stages=eq.${STAGE_DEFS.length}&order=time_ms.asc,updated_at.asc&limit=${limit}`, { headers: H });
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }
     async function rankOf(ms) {
-      const r = await fetch(`${URL_}?select=name&time_ms=lt.${ms}`, { method: "HEAD", headers: { ...H, Prefer: "count=exact" } });
+      const r = await fetch(`${URL_}?select=name&stages=eq.${STAGE_DEFS.length}&time_ms=lt.${ms}`, { method: "HEAD", headers: { ...H, Prefer: "count=exact" } });
       const cr = r.headers.get("content-range");
       if (!cr) return null;
       return (parseInt(cr.split("/")[1], 10) || 0) + 1;
@@ -79,31 +84,99 @@
   }
   window.addEventListener("resize", fit); fit();
 
-  // ===== 入力 =====
+  // ===== 入力（キー/ゲームパッドは自由に割り当て可能）=====
   const keys = {}, pressed = {};
-  const KEYMAP = {
-    ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right",
-    ArrowDown: "down", KeyS: "down", ArrowUp: "up", KeyW: "up",
-    KeyZ: "jump", Space: "jump", KeyK: "jump", KeyC: "jump",
-    KeyX: "dash", ShiftLeft: "dash", ShiftRight: "dash", KeyJ: "dash",
-    KeyR: "retry", Escape: "esc", KeyP: "esc",
+  const ACTIONS = [
+    { id: "left", label: "左へ移動" }, { id: "right", label: "右へ移動" },
+    { id: "up", label: "上（ダッシュ方向）" }, { id: "down", label: "下・しゃがむ" },
+    { id: "jump", label: "ジャンプ" }, { id: "dash", label: "ダッシュ" },
+    { id: "retry", label: "やり直し" }, { id: "esc", label: "一時停止" },
+  ];
+  const SLOTS = 3;
+  const DEFAULT_BINDS = {
+    left: ["ArrowLeft", "KeyA", "Pad14"], right: ["ArrowRight", "KeyD", "Pad15"],
+    up: ["ArrowUp", "KeyW", "Pad12"], down: ["ArrowDown", "KeyS", "Pad13"],
+    jump: ["KeyZ", "Space", "Pad0"], dash: ["KeyX", "ShiftLeft", "Pad2"],
+    retry: ["KeyR", "Pad3", null], esc: ["Escape", "KeyP", "Pad9"],
   };
+  const cloneBinds = (b) => Object.fromEntries(ACTIONS.map((a) => [a.id, Array.from({ length: SLOTS }, (_, i) => (b[a.id] && b[a.id][i]) || null)]));
+  let binds = cloneBinds(save.binds && typeof save.binds === "object" ? save.binds : DEFAULT_BINDS);
+  let KEYMAP = {};
+  function rebuildKeymap() {
+    KEYMAP = {};
+    for (const a of ACTIONS) for (const c of binds[a.id]) if (c) KEYMAP[c] = a.id;
+  }
+  rebuildKeymap();
+  const PAD_NAMES = ["A", "B", "X", "Y", "LB", "RB", "LT", "RT", "Back", "Start", "LS", "RS", "十字↑", "十字↓", "十字←", "十字→", "Home"];
+  function keyName(code) {
+    if (!code) return "―";
+    if (code.startsWith("Pad")) { const n = +code.slice(3); return "🎮" + (PAD_NAMES[n] || "B" + n); }
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+    if (/^Digit\d$/.test(code)) return code.slice(5);
+    if (/^Numpad/.test(code)) return "テンキー" + code.slice(6);
+    const T = {
+      ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓", Space: "Space", Escape: "Esc", Enter: "Enter",
+      ShiftLeft: "左Shift", ShiftRight: "右Shift", ControlLeft: "左Ctrl", ControlRight: "右Ctrl", AltLeft: "左Alt", AltRight: "右Alt",
+      Tab: "Tab", Backquote: "`", Minus: "-", Equal: "=", BracketLeft: "[", BracketRight: "]", Semicolon: ";", Quote: "'",
+      Comma: ",", Period: ".", Slash: "/", Backslash: "\\", IntlRo: "\\", IntlYen: "¥", CapsLock: "CapsLock",
+    };
+    return T[code] || code;
+  }
+  // アクションの代表キー名（看板などに使う）
+  const bindName = (a) => keyName(binds[a].find((c) => c && !c.startsWith("Pad")) || binds[a].find((c) => c));
+
+  const kbDown = {}, touchDown = {};
+  let padDown = {}, padPrev = {};
+  let capture = null; // { action, slot }
   window.addEventListener("keydown", (e) => {
+    if (capture) { e.preventDefault(); onCaptureKey(e.code); return; }
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     const a = KEYMAP[e.code];
     if (!a) return;
+    kbDown[e.code] = true;
     if (!keys[a]) pressed[a] = true;
     keys[a] = true;
-    if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
-    if (a === "esc") onEsc();
+    if (e.code.startsWith("Arrow") || e.code === "Space" || e.code === "Tab") e.preventDefault();
+    if (a === "esc" && !e.repeat) onEsc();
   });
-  window.addEventListener("keyup", (e) => { const a = KEYMAP[e.code]; if (a) keys[a] = false; });
-  window.addEventListener("blur", () => { for (const k in keys) keys[k] = false; });
+  window.addEventListener("keyup", (e) => { delete kbDown[e.code]; const a = KEYMAP[e.code]; if (a) keys[a] = actionHeld(a); });
+  window.addEventListener("blur", () => { for (const k in kbDown) delete kbDown[k]; for (const k in keys) keys[k] = false; });
+  function actionHeld(a) {
+    if (touchDown[a]) return true;
+    for (const c of binds[a]) if (c && (kbDown[c] || padDown[c])) return true;
+    if (padAxis[a]) return true;
+    return false;
+  }
+  // ゲームパッド
+  let padAxis = {};
+  function pollPad() {
+    padPrev = padDown; padDown = {}; padAxis = {};
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const gp of pads) {
+      if (!gp) continue;
+      gp.buttons.forEach((b, i) => { if (b && (b.pressed || b.value > 0.5)) padDown["Pad" + i] = true; });
+      const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+      if (ax < -0.45) padAxis.left = true; if (ax > 0.45) padAxis.right = true;
+      if (ay < -0.55) padAxis.up = true; if (ay > 0.55) padAxis.down = true;
+    }
+    if (capture) {
+      for (const c in padDown) if (!padPrev[c]) { onCaptureKey(c); break; }
+      return;
+    }
+    for (const a of ACTIONS) {
+      const was = keys[a.id];
+      keys[a.id] = actionHeld(a.id);
+      let edge = false;
+      for (const c of binds[a.id]) if (c && padDown[c] && !padPrev[c]) edge = true;
+      if (edge) { pressed[a.id] = true; if (a.id === "esc") onEsc(); }
+      else if (!was && keys[a.id] && padAxis[a.id]) pressed[a.id] = true;
+    }
+  }
   // タッチボタン
   document.querySelectorAll("[data-k]").forEach((b) => {
     const a = b.dataset.k;
-    const down = (e) => { e.preventDefault(); if (!keys[a]) pressed[a] = true; keys[a] = true; b.classList.add("on"); };
-    const up = (e) => { e.preventDefault(); keys[a] = false; b.classList.remove("on"); };
+    const down = (e) => { e.preventDefault(); touchDown[a] = true; if (!keys[a]) pressed[a] = true; keys[a] = true; b.classList.add("on"); };
+    const up = (e) => { e.preventDefault(); touchDown[a] = false; keys[a] = actionHeld(a); b.classList.remove("on"); };
     b.addEventListener("pointerdown", down);
     b.addEventListener("pointerup", up);
     b.addEventListener("pointercancel", up);
@@ -553,6 +626,11 @@
     { bg1: "#1a0712", bg2: "#2c0c1f", tile: "#4a1d3a", edge: "#ff6fae", dark: "#260d1d" },
     { bg1: "#07181a", bg2: "#0c2a2c", tile: "#1d4a4c", edge: "#5fe8d6", dark: "#0e2728" },
     { bg1: "#0a0a12", bg2: "#171725", tile: "#34344d", edge: "#b8b8ff", dark: "#1a1a2a" },
+    { bg1: "#04121c", bg2: "#08202e", tile: "#16405a", edge: "#5ab8ff", dark: "#0a2233" },
+    { bg1: "#160606", bg2: "#280b0b", tile: "#4d1717", edge: "#ff7a5c", dark: "#260a0a" },
+    { bg1: "#14120a", bg2: "#221e0f", tile: "#4a4220", edge: "#ffd54d", dark: "#241f0c" },
+    { bg1: "#071407", bg2: "#0d240f", tile: "#1f4a22", edge: "#7dff8a", dark: "#0e2610" },
+    { bg1: "#120414", bg2: "#1f0824", tile: "#3a1a44", edge: "#e07bff", dark: "#1c0a22" },
   ];
   function prerender() {
     const th = THEMES[lvl.theme];
@@ -602,11 +680,12 @@
     g.font = "bold 13px 'DotGothic16', monospace";
     g.textBaseline = "top";
     for (const s of lvl.signs || []) {
-      const w = g.measureText(s.t).width + 14;
+      const text = s.t.replace(/\{(\w+)\}/g, (m, k) => (binds[k] ? bindName(k) : m));
+      const w = g.measureText(text).width + 14;
       const x = s.c * TILE, y = s.r * TILE;
       g.fillStyle = "rgba(0,0,0,.45)"; g.fillRect(x, y, w, 22);
       g.strokeStyle = "rgba(255,255,255,.25)"; g.strokeRect(x + 0.5, y + 0.5, w - 1, 21);
-      g.fillStyle = "#e8e8ff"; g.fillText(s.t, x + 7, y + 4);
+      g.fillStyle = "#e8e8ff"; g.fillText(text, x + 7, y + 4);
     }
   }
 
@@ -780,13 +859,17 @@
     const shown = mode === "rta" ? runFrames : stageFrames;
     const txt = fmt(shown);
     ctx.fillStyle = "rgba(0,0,0,.5)";
-    ctx.fillRect(10, 10, 190, 60);
+    ctx.font = "13px 'DotGothic16', monospace";
+    const subTxt = `${lvl.name} ${lvl.title}  ✖${deaths}`;
+    const subW = ctx.measureText(subTxt).width + (mode === "il" ? 80 : 0);
+    ctx.font = "bold 30px 'Share Tech Mono', monospace";
+    ctx.fillRect(10, 10, Math.max(190, subW + 22), 60);
     ctx.fillStyle = state === "clear" ? "#ffe066" : "#fff";
     ctx.fillText(txt, 20, 14);
     ctx.font = "13px 'DotGothic16', monospace";
     ctx.fillStyle = "#aab";
-    ctx.fillText(`${lvl.name} ${lvl.title}  ✖${deaths}`, 20, 48);
-    if (mode === "il") { ctx.fillStyle = "#ff5cf0"; ctx.fillText("PRACTICE", 130, 48); }
+    ctx.fillText(subTxt, 20, 48);
+    if (mode === "il") { ctx.fillStyle = "#ff5cf0"; ctx.fillText("PRACTICE", 20 + subW - 72, 48); }
     // 右上: 自己ベスト
     ctx.textAlign = "right";
     ctx.font = "13px 'Share Tech Mono', monospace";
@@ -816,6 +899,7 @@
   let acc = 0, last = performance.now();
   function tick(now) {
     let dt = now - last; last = now;
+    pollPad();
     if (dt > 250) dt = 250;
     acc += dt;
     let n = 0;
@@ -869,7 +953,60 @@
     toastTimer = setTimeout(() => el.classList.remove("show"), 3600);
   }
 
+  let keyBack = "title";
+  function stopCapture() { capture = null; $("keyHint").textContent = "変えたい枠をクリック → 割り当てたいキー（またはゲームパッドのボタン）を押す"; }
+  function onCaptureKey(code) {
+    const c = capture;
+    if (!c) return;
+    if (code === "Escape" && !(c.action === "esc")) { stopCapture(); ui.renderKeys(); return; }
+    if (code === "Backspace" || code === "Delete") {
+      binds[c.action][c.slot] = null;
+    } else {
+      // 同じキーが他で使われていたら外す
+      for (const a of ACTIONS) binds[a.id] = binds[a.id].map((x) => (x === code ? null : x));
+      binds[c.action][c.slot] = code;
+    }
+    save.binds = binds; persist(); rebuildKeymap();
+    for (const k in keys) keys[k] = false;
+    stopCapture();
+    ui.renderKeys();
+  }
+
   const ui = {
+    keyConfig(back) {
+      keyBack = back;
+      this.show("keysScreen");
+      stopCapture();
+      this.renderKeys();
+    },
+    renderKeys() {
+      const box = $("keyList");
+      box.innerHTML = ACTIONS.map((a) => `<div class="keyRow"><span class="kl">${esc(a.label)}</span>${
+        binds[a.id].map((c, i) => `<button class="kslot ${capture && capture.action === a.id && capture.slot === i ? "wait" : ""} ${c ? "" : "empty"}" data-a="${a.id}" data-s="${i}">${
+          capture && capture.action === a.id && capture.slot === i ? "入力待ち…" : esc(keyName(c))}</button>`).join("")}</div>`).join("");
+      const missing = ACTIONS.filter((a) => !binds[a.id].some((c) => c)).map((a) => a.label);
+      $("keyWarn").textContent = missing.length ? `⚠ 未割り当て: ${missing.join("、")}` : "";
+      box.querySelectorAll(".kslot").forEach((b) => b.onclick = () => {
+        capture = { action: b.dataset.a, slot: +b.dataset.s };
+        $("keyHint").textContent = "割り当てたいキー/ボタンを押してください（Esc: キャンセル ／ Backspace: この枠を空にする）";
+        ui.renderKeys();
+        b.blur();
+      });
+    },
+    help() {
+      this.show("helpScreen");
+      const names = (a) => binds[a].filter(Boolean).map(keyName).join(" ／ ") || "（未割り当て）";
+      $("helpKeys").innerHTML = [
+        ["移動", `${names("left")}　|　${names("right")}`],
+        ["ジャンプ", names("jump") + "（長押しで高く）"],
+        ["ダッシュ", names("dash") + "（方向入力で8方向。着地で回復）"],
+        ["しゃがむ", names("down") + "（狭い所をくぐれる）"],
+        ["上入力", names("up") + "（上方向ダッシュ用）"],
+        ["壁ジャンプ", "空中で壁に触れながらジャンプ（銀色の金属壁は不可）"],
+        ["やり直し", names("retry") + "（チェックポイントへ戻る）"],
+        ["一時停止", names("esc")],
+      ].map(([k, v]) => `<tr><th>${k}</th><td>${esc(v)}</td></tr>`).join("");
+    },
     hideAll() { document.querySelectorAll(".screen").forEach((e) => e.classList.add("hidden")); },
     show(id) { this.hideAll(); $(id).classList.remove("hidden"); },
     hud(on) { document.body.classList.toggle("playing", on); },
@@ -961,7 +1098,7 @@
         $("submitMsg").textContent = "送信中…";
         const ms = Math.round(frames * 1000 / 60);
         try {
-          await Ranking.submit({ id: save.pid, name, time_ms: ms, bugs: used.length, deaths, updated_at: new Date().toISOString() });
+          await Ranking.submit({ id: save.pid, name, time_ms: ms, bugs: used.length, deaths, stages: STAGE_DEFS.length, updated_at: new Date().toISOString() });
           save.submitted = frames; persist();
           $("submitBox").classList.add("hidden");
           const r = await Ranking.rankOf(ms).catch(() => null);
@@ -978,7 +1115,19 @@
   $("btnPractice").onclick = () => ui.practice();
   $("btnDex").onclick = () => ui.dex();
   $("btnRank").onclick = () => ui.rank();
-  $("btnHelp").onclick = () => ui.show("helpScreen");
+  $("btnHelp").onclick = () => ui.help();
+  $("btnKeys").onclick = () => ui.keyConfig("title");
+  $("btnPauseKeys").onclick = () => ui.keyConfig("pause");
+  $("btnKeysBack").onclick = () => {
+    stopCapture();
+    prerender();
+    if (keyBack === "pause") ui.show("pauseScreen"); else ui.title();
+  };
+  $("btnKeysReset").onclick = () => {
+    stopCapture();
+    binds = cloneBinds(DEFAULT_BINDS); save.binds = binds; persist(); rebuildKeymap(); prerender(); ui.renderKeys();
+  };
+  document.querySelectorAll(".nStages").forEach((e) => (e.textContent = STAGE_DEFS.length));
   document.querySelectorAll("[data-back]").forEach((b) => b.onclick = () => ui.title());
   $("btnResume").onclick = () => { state = "play"; ui.pause(false); };
   $("btnRestartRun").onclick = () => startRun(mode, mode === "rta" ? 0 : stageIdx);

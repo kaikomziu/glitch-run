@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>GLITCH RUN DELUXE - バグを使って最速を目指すアクション</title>
-<meta name="description" content="このゲームには、いくつかのバグがあります。ダッシュと壁ジャンプで駆け抜ける2Dアクション。隠されたバグを見つけて使いこなし、全5ステージの最速タイムを世界ランキングで競おう。">
+<meta name="description" content="このゲームには、いくつかのバグがあります。ダッシュと壁ジャンプで駆け抜ける2Dアクション。隠されたバグを見つけて使いこなし、全10ステージの最速タイムを世界ランキングで競おう。">
 <link rel="canonical" href="https://kaikomziu.github.io/glitch-run/">
 <meta property="og:title" content="GLITCH RUN DELUXE - バグを使って最速を目指すアクション">
 <meta property="og:description" content="このゲームには、いくつかのバグがあります。バグを見つけて使いこなし、最速タイムを狙うスピードランアクション。">
@@ -39,10 +39,11 @@
     <div class="sub">D E L U X E</div>
     <p class="lead">このゲームには、いくつかのバグがあります。<br><span>バグの利用は、禁止されていません。</span></p>
     <div class="menu">
-      <button id="btnRta" class="primary">▶ RTA スタート（全5ステージ）</button>
+      <button id="btnRta" class="primary">▶ RTA スタート（全<span class="nStages">10</span>ステージ）</button>
       <button id="btnPractice">ステージ練習</button>
       <button id="btnDex">バグ図鑑</button>
       <button id="btnRank">世界ランキング</button>
+      <button id="btnKeys">キー設定</button>
       <button id="btnHelp">あそびかた</button>
     </div>
     <div class="stats">
@@ -58,19 +59,26 @@
 <section id="helpScreen" class="screen hidden">
   <div class="panel">
     <h2>あそびかた</h2>
-    <table class="keys">
-      <tr><th>移動</th><td>← → ／ A D</td></tr>
-      <tr><th>ジャンプ</th><td>Z ／ Space ／ K（長押しで高く）</td></tr>
-      <tr><th>ダッシュ</th><td>X ／ Shift ／ J（方向キーで8方向。着地で回復）</td></tr>
-      <tr><th>しゃがむ</th><td>↓ ／ S（狭い所をくぐれる）</td></tr>
-      <tr><th>壁ジャンプ</th><td>空中で壁に触れながらジャンプ（銀色の金属壁は不可）</td></tr>
-      <tr><th>やり直し</th><td>R（チェックポイントへ戻る）</td></tr>
-      <tr><th>一時停止</th><td>Esc ／ P</td></tr>
-    </table>
-    <p class="note">全5ステージを駆け抜けるタイムアタック。ミスしてもチェックポイントから再開できますが、タイマーは止まりません。<br>
+    <table class="keys" id="helpKeys"></table>
+    <p class="note small">操作はタイトルの「キー設定」から自由に変更できます（ゲームパッド対応）。</p>
+    <p class="note">全<span class="nStages">10</span>ステージを駆け抜けるタイムアタック。ミスしてもチェックポイントから再開できますが、タイマーは止まりません。<br>
     このゲームには <b>いくつかのバグ</b> が残っています。見つけたバグは「バグ図鑑」に記録されます。<br>
     使うかどうかはあなた次第。世界ランキングは「なんでもあり」です。</p>
     <button data-back>戻る</button>
+  </div>
+</section>
+
+<!-- キー設定 -->
+<section id="keysScreen" class="screen hidden">
+  <div class="panel">
+    <h2>キー設定</h2>
+    <p class="note" id="keyHint"></p>
+    <div id="keyList"></div>
+    <div class="warn" id="keyWarn"></div>
+    <div class="menu row">
+      <button id="btnKeysReset">初期設定に戻す</button>
+      <button id="btnKeysBack" class="primary">決定して戻る</button>
+    </div>
   </div>
 </section>
 
@@ -97,7 +105,7 @@
 <!-- ランキング -->
 <section id="rankScreen" class="screen hidden">
   <div class="panel">
-    <h2>世界ランキング <small>RTA 全5ステージ</small></h2>
+    <h2>世界ランキング <small>RTA 全<span class="nStages">10</span>ステージ</small></h2>
     <div id="rankList"></div>
     <button data-back>戻る</button>
   </div>
@@ -110,6 +118,7 @@
     <div class="menu">
       <button id="btnResume" class="primary">再開</button>
       <button id="btnRestartRun">最初からやり直す</button>
+      <button id="btnPauseKeys">キー設定</button>
       <button id="btnQuit">タイトルへ</button>
     </div>
   </div>

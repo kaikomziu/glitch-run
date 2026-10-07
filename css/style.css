@@ -118,3 +118,15 @@ body.touch.playing #touch { display: flex; }
 .pad.left .up { position: absolute; left: 66px; bottom: 66px; }
 .pad.right .jump { width: 72px; height: 72px; font-size: 14px; font-family: "Share Tech Mono", monospace; }
 .pad.right .dash { font-size: 12px; font-family: "Share Tech Mono", monospace; border-color: rgba(255, 92, 240, .5); }
+
+/* キー設定 */
+#keyList { display: flex; flex-direction: column; gap: 6px; }
+.keyRow { display: flex; gap: 6px; align-items: center; }
+.keyRow .kl { flex: 1; text-align: left; font-size: 14px; color: #ccd; }
+.kslot { width: 104px; padding: 7px 4px; font-family: "Share Tech Mono", "DotGothic16", monospace; font-size: 14px; background: #0a0b1c; }
+.kslot.empty { color: #556; }
+.kslot.wait { background: #5c1f57; border-color: #ff5cf0; animation: blink .7s infinite; }
+.warn { color: #ff8a8a; font-size: 13px; min-height: 1.3em; margin-top: 8px; }
+.note.small { font-size: 12px; margin-top: 10px; }
+#stageList { max-height: 56vh; overflow-y: auto; }
+@media (max-width: 520px) { .kslot { width: 74px; font-size: 12px; } .keyRow .kl { font-size: 12px; } }
